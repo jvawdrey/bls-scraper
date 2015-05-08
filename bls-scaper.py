@@ -155,7 +155,7 @@ def insertRecords(connection, cursor, tableName, data, state_array):
         else:
             str = str + ",('" + state_array + "'," + parseString(data[i]) + ")"
 
-        if (i % 20000) == 0:
+        if (i % MICROBATCHSIZE) == 0:
 
             sqlString = "INSERT INTO " + tableName + " VALUES " + str
 
