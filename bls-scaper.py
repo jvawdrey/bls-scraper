@@ -8,10 +8,6 @@ and ingest data into Postgres/Greenplum/HAWQ database
 Link
 http://download.bls.gov/pub/time.series/la/
 
-To Do
-* extract config
-* add parsing
-* dynamic micro batch
 """
 
 # 3rd party dependencies
@@ -155,9 +151,9 @@ def insertRecords(connection, cursor, tableName, data, state_array):
     # batch insert string
     for i in range(1, len(data)):
         if(i == 1):
-            str = "('" + state_array + "'," + filterParseString(data[i]) + ")"
+            str = "('" + state_array + "'," + parseString(data[i]) + ")"
         else:
-            str = str + ",('" + state_array + "'," + filterParseString(data[i]) + ")"
+            str = str + ",('" + state_array + "'," + parseString(data[i]) + ")"
 
         if (i % 20000) == 0:
 
@@ -184,10 +180,13 @@ def insertRecords(connection, cursor, tableName, data, state_array):
 
     return(None)
 
-def filterParseString(str):
-    return("'" + str[0:20] + "','" + str[31:35] +
-           "','" + str[36:39] +"'," + str[37:39] +
-           "," + str[49:52])
+def parseString(str):
+    return("'" + str[0:20] +            # series_id (TEXT)
+           "','" + str[31:35] +         # year (TEXT)
+           "','" + str[36:39] +         # period (TEXT)
+           "'," + str[37:39] +          # month (INTEGER)
+           "," + str[49:52]             # value (NUMERIC)
+           )
 
 # main driver (calls above functions in sequence)
 def main():

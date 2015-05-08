@@ -6,3 +6,8 @@ and ingest data into Postgres/Greenplum/HAWQ database
 
 Link
 http://download.bls.gov/pub/time.series/la/
+
+To Do
+* extract config
+* add parsing
+* dynamic micro batch
