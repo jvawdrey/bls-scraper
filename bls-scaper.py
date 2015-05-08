@@ -21,7 +21,7 @@ import requests     # Python HTTP for Humans
 import csv          # CSV File Reading and Writing
 
 __author__ = "Jarrod Vawdrey (jjvawdrey@gmail.com)"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __status__ = "Development"
 
 # postgres/greenplum/hawq connection
@@ -29,12 +29,13 @@ DBNAME="postgres"                       # database name
 DBUSER="postgres"                       # database username
 DBPASSWORD="postgres"                   # database password
 DBHOST="localhost"                      # database host
-DBPORT="5432"                           # databse port
+DBPORT="5432"                           # database port
+MICROBATCHSIZE=20000                    # size of insert batch
 
 # postgres table information
 TABLE_NAME="public.bls_unemployment_stats"   # schema.table to insert bls data
-COL_NAMES=['st','raw_text']
-COL_TYPES=['text','text']
+COL_NAMES=['state','series_id','year','period','month','value']
+COL_TYPES=['text','text','text','text','integer','numeric(10,2)']
 
 # link
 link = 'http://download.bls.gov/pub/time.series/la/'
@@ -147,30 +148,22 @@ def createTable(connection, cursor, tableName, cols, colTypes):
     except psycopg2.Error as e:
         return(e.diag.message_primary)
 
-def insertSingleColumnRecords(connection, cursor, tableName, data, state_array):
+def insertRecords(connection, cursor, tableName, data, state_array):
 
     print len(data)
 
     # batch insert string
-    str = "('" + state_array + "','" + data[0] + "')"
     for i in range(1, len(data)):
-        str = str + ",('" + state_array + "','" + data[i] + "')"
-        '''
-        print data[i][31:35]
-        try:
-            if (float(data[i][31:35]) >= 1950):
-                str = str + ",('" + state_array + "','" + data[i] + "')"
-            else:
-                print "Dropping record where year < 1990"
-        except:
-            print "Failed substring"
-        '''
+        if(i == 1):
+            str = "('" + state_array + "'," + filterParseString(data[i]) + ")"
+        else:
+            str = str + ",('" + state_array + "'," + filterParseString(data[i]) + ")"
 
         if (i % 20000) == 0:
 
             sqlString = "INSERT INTO " + tableName + " VALUES " + str
 
-            str = "(null,null)"
+            str = " "
 
             try:
                 # execute and commit query
@@ -180,7 +173,7 @@ def insertSingleColumnRecords(connection, cursor, tableName, data, state_array):
                 return(e.diag.message_primary)
 
     # load any remaining
-    if (str != "(null,null)"):
+    if (str != " "):
         sqlString = "INSERT INTO " + tableName + " VALUES " + str
         try:
             # execute and commit query
@@ -190,6 +183,11 @@ def insertSingleColumnRecords(connection, cursor, tableName, data, state_array):
             return(e.diag.message_primary)
 
     return(None)
+
+def filterParseString(str):
+    return("'" + str[0:20] + "','" + str[31:35] +
+           "','" + str[36:39] +"'," + str[37:39] +
+           "," + str[49:52])
 
 # main driver (calls above functions in sequence)
 def main():
@@ -227,7 +225,7 @@ def main():
         data = r.text.splitlines()
 
         # insert lines into db
-        e = insertSingleColumnRecords(conn, cur, TABLE_NAME, data, state_array[i])
+        e = insertRecords(conn, cur, TABLE_NAME, data, state_array[i])
         # If error with inserting data then exit
         if (e is not None):
             print "Exiting: Unable to insert records into table \n" + e
