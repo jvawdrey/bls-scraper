@@ -103,8 +103,7 @@ def connect_db(dbname, dbuser, dbpassword, dbhost, dbport):
     except psycopg2.Error as e:
         conn = None
         cur = None
-        print "Unable to connect to database " + dbname
-        return (conn, cur, e.diag.message_primary)
+        return (conn, cur, e)
 
 # disconnect from database
 def disconnect_db(connection, cursor):
@@ -193,9 +192,10 @@ def main():
 
     # Connect to database
     conn, cur, e = connect_db(DBNAME, DBUSER, DBPASSWORD, DBHOST, DBPORT)
+
     # If database connection not made exit
     if (e is not None):
-        print "Exiting: Unable to connect to database \n" + e
+        print "Exiting: Unable to connect to database"
         sys.exit()
 
     # drop table if exists
@@ -238,4 +238,5 @@ def main():
     sys.exit()
 
 # call driver
-main()
+if __name__ == "__main__":
+    main()
