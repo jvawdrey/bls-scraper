@@ -15,21 +15,26 @@ import psycopg2     # postgres client
 import sys          # System-specific parameters and function
 import requests     # Python HTTP for Humans
 import csv          # CSV File Reading and Writing
+import ConfigParser # Configuration file parser
 
 __author__ = "Jarrod Vawdrey (jjvawdrey@gmail.com)"
 __version__ = "0.0.2"
 __status__ = "Development"
 
+# read configuration file
+config = ConfigParser.SafeConfigParser()
+config.read('config.ini')
+
 # postgres/greenplum/hawq connection
-DBNAME="postgres"                       # database name
-DBUSER="postgres"                       # database username
-DBPASSWORD="postgres"                   # database password
-DBHOST="localhost"                      # database host
-DBPORT="5432"                           # database port
-MICROBATCHSIZE=20000                    # size of insert batch
+DBNAME=config.get('postgres', 'database')       # database name
+DBUSER=config.get('postgres', 'user')           # database username
+DBPASSWORD=config.get('postgres', 'password')   # database password
+DBHOST=config.get('postgres', 'host')           # database host
+DBPORT=config.get('postgres', 'port')           # database port
+INSERTSIZE=config.get('postgres', 'insertsize') # size of insert batch
 
 # postgres table information
-TABLE_NAME="public.bls_unemployment_stats"   # schema.table to insert bls data
+TABLE_NAME=config.get('postgres', 'results_table_schema') + '.' + config.get('postgres', 'results_table_name')  # schema.table to insert bls data
 COL_NAMES=['state','series_id','year','period','month','value']
 COL_TYPES=['text','text','text','text','integer','numeric(10,2)']
 
@@ -154,7 +159,7 @@ def insertRecords(connection, cursor, tableName, data, state_array):
         else:
             str = str + ",('" + state_array + "'," + parseString(data[i]) + ")"
 
-        if (i % MICROBATCHSIZE) == 0:
+        if (i % INSERTSIZE) == 0:
 
             sqlString = "INSERT INTO " + tableName + " VALUES " + str
 
